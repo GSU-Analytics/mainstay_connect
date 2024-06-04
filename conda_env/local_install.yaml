@@ -1,0 +1,16 @@
+# local_install.yaml
+
+# To install this environment, use the following command:
+# conda env create -f local_install.yaml
+# After creating the environment, activate it with:
+# conda activate mainstay_connect
+
+name: mainstay_connect
+channels:
+  - defaults
+dependencies:
+  - python=>3.10
+  - keyring
+  - pandas
+  - requests
+  - pytest
