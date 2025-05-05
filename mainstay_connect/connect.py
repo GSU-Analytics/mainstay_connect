@@ -69,7 +69,7 @@ class MainstayConnect:
             APIToken abcd1234xyz
         """
         token = keyring.get_password(self.service_name, 'api_token')
-        if token is None:
+        if not token:
             token = input("Enter the API token: ")
             keyring.set_password(self.service_name, 'api_token', token)
         return token
