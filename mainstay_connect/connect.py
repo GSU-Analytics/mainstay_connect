@@ -38,7 +38,6 @@ Further documentation is available at:
 https://docs.api.mainstay.com/
 """
 
-
 import requests
 import keyring
 import pandas as pd
