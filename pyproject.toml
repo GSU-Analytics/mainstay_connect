@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mainstay_connect"
+version = "1.1.0"
+authors = [
+    {name = "Isaac Kerson", email = "ikerson@gsu.edu"},
+]
+description = "A Mainstay API connection handler"
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "keyring",
+    "requests",
+    "pandas",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/GSU-Analytics/mainstay_connect"
+"Bug Tracker" = "https://github.com/GSU-Analytics/mainstay_connect/issues"
+
+[project.optional-dependencies]
+test = ["pytest"]

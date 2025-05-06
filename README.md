@@ -10,6 +10,29 @@ MainstayConnect is a Python package designed to streamline and simplify API inte
 
 ## Installation
 
+### Using uv (Recommended)
+
+[uv](https://docs.astral.sh/uv/) is an extremely fast Python package installer and resolver, written in Rust. To install MainstayConnect with uv:
+
+```bash
+# Install uv if you haven't already
+# For Unix-based systems (Linux/macOS)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# For Windows using PowerShell
+irm https://astral.sh/uv/install.ps1 | iex
+
+# Create and activate a virtual environment
+uv venv
+# On Windows
+.venv\Scripts\activate
+# On Unix/macOS
+source .venv/bin/activate
+
+# Install MainstayConnect
+uv pip install git+https://github.com/GSU-Analytics/mainstay_connect.git
+```
+
 ### Using Conda
 
 To set up a Conda environment with all dependencies pre-installed, use the `remote_install.yaml` file:
@@ -33,7 +56,7 @@ Ensure that your environment has Python 3.10 or higher, as specified in the `rem
 
 ## Usage
 
-Here’s a simple example of how to use MainstayConnect to test your API connection and fetch contact details:
+Here's a simple example of how to use MainstayConnect to test your API connection and fetch contact details:
 
 ```python
 from mainstay_connect import MainstayConnect
@@ -51,9 +74,32 @@ See the `example.py` file for more examples of how to use the MainstayConnect li
 
 See the [Mainstay API documentation](https://mainstayconnect.com/docs) for more information on the available endpoints and parameters.
 
+## Development
+
+If you want to contribute to MainstayConnect, you can set up a development environment using uv:
+
+```bash
+# Clone the repository
+git clone https://github.com/GSU-Analytics/mainstay_connect.git
+cd mainstay_connect
+
+# Create and activate a virtual environment
+uv venv
+# On Windows
+.venv\Scripts\activate
+# On Unix/macOS
+source .venv/bin/activate
+
+# Install in development mode
+uv pip install -e .
+
+# Install development dependencies
+uv pip install pytest
+```
+
 ## Contributing
 
-We welcome contributions from the community, whether it's improving documentation, bug fixes, or new features! Here’s how you can contribute:
+We welcome contributions from the community, whether it's improving documentation, bug fixes, or new features! Here's how you can contribute:
 
 1. **Fork the Repository**
    - Navigate to [GitHub repository](https://github.com/GSU-Analytics/mainstay_connect) and click the 'Fork' button.
@@ -91,7 +137,7 @@ We welcome contributions from the community, whether it's improving documentatio
      ```
 
 7. **Submit a Pull Request**
-   - Go to your repository on GitHub and click the ‘New pull request’ button. Select your branch and submit the pull request with a clear description of the changes.
+   - Go to your repository on GitHub and click the 'New pull request' button. Select your branch and submit the pull request with a clear description of the changes.
 
 ## Support
 
