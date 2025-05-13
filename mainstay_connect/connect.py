@@ -118,6 +118,47 @@ class MainstayConnect:
         response_data['response_code'] = response.status_code
         return response_data
 
+    def get_mainstay_endpoint(self, endpoint: str, **kwargs) -> Dict[str, any]:
+        """
+        Send any arbitrary Mainstay API call. Most custom get methods in this
+        class dispatch to this method under the hood.
+
+        Args:
+            endpoint (str): A Mainstay API endpoing, such as 'contacts/'
+            **kwargs: Arbitrary keyword arguments for optional filters. These
+                will vary depending on the endpoint you use. Examples might include:
+                - texting_status (Optional[str]): Filter by texting status (opted-in, opted-out, temp-pause).
+                - custom (Optional[str]): Filter by custom fields.
+                - can_text (Optional[str]): Filter by can_text value (True, true, 1, False, false, 0).
+                - include_test_contacts (Optional[str]): Include test contacts (True, true, 1, False, false, 0).
+                - include_nonpermitted_contacts (Optional[str]): Include non-permitted contacts (True, true, 1, False, false, 0).
+                - modified_since (Optional[str]): Filter by last modified date (ISO 8601 format).
+                - modified_before (Optional[str]): Filter by modified before date (ISO 8601 format).
+        
+        Returns:
+            dict: JSON response from the API containing the contact details.
+
+        Example:
+            >>> connector = MainstayConnector()
+            >>> contact = connector.get_mainstay_endpoint("contacts/1234567890", texting_status="opted-in")
+            >>> print(contact)
+            {...}
+        """
+        # Construct the endpoint
+        url = self.base_url + endpoint
+        
+        # Remove any None values from the kwargs dictionary
+        params = {key: value for key, value in kwargs.items() if value is not None}
+        
+        # Ping the server
+        response = requests.get(url, headers=self.headers, params=params)
+        
+        # Parse the response
+        if response.status_code == 200:
+            return response.json()
+        else:
+            response.raise_for_status()
+
     def get_contact(self, id: str, **kwargs) -> Dict[str, Any]:
         """
         Retrieve a single contact by CRM ID, phone, or AdmitHub ID from the Mainstay API.
@@ -142,19 +183,8 @@ class MainstayConnect:
             >>> print(contact)
             {...}
         """
-        url = f"{self.base_url}contacts/{id}/"
-        
-        # Remove any None values from the kwargs dictionary
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 404:
-            return {"detail": "not found"}
-        else:
-            response.raise_for_status()
+        endpoint = f"contacts/{id}/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def get_contacts(self, **kwargs) -> Dict[str, Any]:
         """
@@ -180,18 +210,9 @@ class MainstayConnect:
             >>> print(contacts)
             {...}
         """
-        url = self.base_url + "contacts/"
+        endpoint = "contacts/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
         
-        # Remove any None values from the kwargs dictionary
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
-
     def get_custom_fields(self) -> Dict[str, Any]:
         """
         Retrieve the list of valid custom fields from the Mainstay API.
@@ -205,14 +226,8 @@ class MainstayConnect:
             >>> print(custom_fields)
             {'custom_fields': ['Field1', 'Field2', ...]}
         """
-        url = self.base_url + "custom_fields"
-        
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "custom_fields/"
+        return self.get_mainstay_endpoint(endpoint)
 
     def get_custom_values(self, field: str) -> Dict[str, Any]:
         """
@@ -230,19 +245,9 @@ class MainstayConnect:
             >>> print(custom_values)
             {'values': ['Value1', 'Value2', ...]}
         """
-        url = self.base_url + "custom_values"
+        endpoint = "custom_values/"
+        return self.get_mainstay_endpoint(endpoint, field=field)
         
-        params = {'field': field}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 400:
-            return {"detail": "Missing or invalid field"}
-        else:
-            response.raise_for_status()
-
     def get_default_fields(self) -> Dict[str, Any]:
         """
         Retrieve a list of default (non-custom) contact fields from the Mainstay API.
@@ -256,15 +261,9 @@ class MainstayConnect:
             >>> print(default_fields)
             {...}
         """
-        url = self.base_url + "default_fields"
-        
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
-
+        endpoint = "default_fields/"
+        return self.get_mainstay_endpoint(endpoint)
+    
     def get_campaign_list(self, **kwargs) -> Dict[str, Any]:
         """
         Retrieve a list of campaigns from the Mainstay API with optional filters.
@@ -291,13 +290,8 @@ class MainstayConnect:
             >>> print(campaigns)
             {...}
         """
-        url = self.base_url + "campaigns/"
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = self.base_url + "campaigns/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def get_messages(self, **kwargs) -> Dict[str, Any]:
         """
@@ -323,13 +317,8 @@ class MainstayConnect:
             >>> print(messages)
             {...}
         """
-        url = self.base_url + "messages/"
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "messages/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def json_to_dataframe(self, json_data: Dict[str, Any], key: str = 'results') -> pd.DataFrame:
         """
