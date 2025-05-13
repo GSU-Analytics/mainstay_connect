@@ -41,7 +41,10 @@ https://docs.api.mainstay.com/
 import requests
 import keyring
 import pandas as pd
-from typing import Dict, Any
+from pathlib import Path
+from utils import pagination_utils
+from typing import Dict, Any, Union
+from collections.abc import Callable
 
 class MainstayConnect:
     base_url = "https://api.admithub.com/"
@@ -319,6 +322,45 @@ class MainstayConnect:
         """
         endpoint = "messages/"
         return self.get_mainstay_endpoint(endpoint, **kwargs)
+
+    def create_pagination_wrapper(
+            self,
+            method: Callable,
+            serialize: bool=False,
+            checkpoint_location: Union[str | Path]='./checkpoints',
+            output_name: Union[str | None]=None,
+            sleep_duration=1.5):
+        """Creates a pagination wrapper for a given method. Useful for any arbitrary
+        API endpoint retrieval which returns a linked list of pages as results.
+
+        Parameters:
+        - method: The method to be wrapped for pagination e.g. `get_messages`.
+        - serialize (bool, optional): If True, results will be serialized. Defaults to False.
+        - checkpoint_location (str, optional): Location to store checkpoints. Defaults to './checkpoints'.
+        - output_name (str, optional): Name of the output file. Defaults to None.
+        - sleep_duration (float, optional): Duration to sleep between pagination requests. Defaults to 1.5 seconds.
+
+        Returns:
+        - function: A wrapper function that handles pagination for the specified method.
+
+        Example:
+        ```
+        >>> connector = MainstayConnector()
+        >>> get_message_paginations = connector.create_pagination_wrapper(connector.get_messages, serialize=True, output_name="Spring_2020")
+        >>> results = get_message_paginations(...)
+        ```
+        """
+        def pagination_wrapper(**mainstay_kwargs):
+            return pagination_utils.extract_paginated_results(
+                self,
+                method,
+                serialize=serialize,
+                checkpoint_location=checkpoint_location,
+                output_name=output_name,
+                sleep_duration=sleep_duration,
+                **mainstay_kwargs
+            )
+        return pagination_wrapper
 
     def json_to_dataframe(self, json_data: Dict[str, Any], key: str = 'results') -> pd.DataFrame:
         """
