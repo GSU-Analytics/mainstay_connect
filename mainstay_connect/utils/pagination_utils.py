@@ -5,7 +5,6 @@ import sys
 from loguru import logger
 from pathlib import Path
 from collections.abc import Callable
-from typing import Union, Any
 
 SERIALIZATION_NOTIF = "You have chosen not to serialize your checkpoints. At the end of this process, you will be asked if you want to automatically delete the checkpoints."
 
@@ -14,8 +13,8 @@ def extract_paginated_results(
         connector,
         mainstay_api_call: Callable,
         serialize: bool=False,
-        checkpoint_location: Union[str | Path]='./checkpoints',
-        output_name: Union[str | None]=None,
+        checkpoint_location: str | Path='./checkpoints',
+        output_name: str | None=None,
         sleep_duration=1.5,
         **mainstay_kwargs) -> dict:
     """
@@ -36,7 +35,7 @@ def extract_paginated_results(
 
     if not output_name:
         output_name = input('Please provide a name for your pages: ')
-    logger.add(Path('logs') / f"pagination_{output_name}" + "_{time}.log")
+    logger.add(Path('logs') / (f"pagination_{output_name}" + "_{time}.log"))
     logger.info(f"Calling with {mainstay_kwargs}...")
     if not serialize:
         logger.info(SERIALIZATION_NOTIF)
@@ -56,14 +55,16 @@ def extract_paginated_results(
             time.sleep(sleep_duration)
         next_results = requests.get(next_URI, headers=connector.headers)
         next_results = process_output(next_results, checkpoint_location, output_name, iteration)
-        next_URI = next_results['next']
+        assert isinstance(next_results, dict)
+        next_URI = next_results.get('next')
+
+    paginated_dict = load_paginated_checkpoints(checkpoint_location, output_name)
     if not serialize:
-        paginated_dict = load_paginated_checkpoints(checkpoint_location, output_name)
         remove_paginated_checkpoints(checkpoint_location, output_name)
-        return paginated_dict
+    return paginated_dict
 
 
-def process_output(results, checkpoint_stem: str, name: str, iteration: Union[str | int], format=True) -> None:
+def process_output(results, checkpoint_stem, name, iteration, format=True):
     '''Used by extract_paginated_results.
     Optionally format the results, then validate them, and then serialize them.
     '''
@@ -74,7 +75,7 @@ def process_output(results, checkpoint_stem: str, name: str, iteration: Union[st
     return results
 
 
-def validate_paginated_results(results: Any) -> None:
+def validate_paginated_results(results) -> None:
     '''Check the structure of the returned mainstay_api data.
     Will raise an error if certain criteria are not true.
     '''
@@ -83,7 +84,7 @@ def validate_paginated_results(results: Any) -> None:
     assert isinstance(results['results'], list), "Your results are not a list. Please check the format of your values."
 
 
-def format_output(output) -> dict:
+def format_output(output):
     '''Format the output from the mainstay API requests.
     '''
     if output.status_code == 200:
@@ -92,7 +93,7 @@ def format_output(output) -> dict:
         output.raise_for_status()
 
 
-def serialize_output(output, directory: Path, name: str, iteration: Union[str | int]) -> None:
+def serialize_output(output, directory: Path, name: str, iteration: str | int) -> None:
     '''Save the outputs to the specified directory.
     '''
     if not directory.exists():
