@@ -21,6 +21,7 @@ dependencies = [
     "keyring",
     "requests",
     "pandas",
+    "loguru>=0.7.3",
 ]
 
 [project.urls]
