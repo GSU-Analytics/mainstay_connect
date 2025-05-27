@@ -370,7 +370,7 @@ class MainstayConnect:
         # Return the wrapped function
         return pagination_wrapper
     
-    def load_paginated_checkpoints(self, path: Path | str, name: str, raw: bool, extension='.pickle') -> dict | pd.DataFrame:
+    def load_paginated_checkpoints(self, path: Path | str, name: str, raw: bool=False, extension='.pickle') -> dict | pd.DataFrame:
         """Load a sequence of pickle files into one dictionary or DataFrame.
 
         This function searches for all files in the specified directory (`path`) that match the given `name` and `extension`.
