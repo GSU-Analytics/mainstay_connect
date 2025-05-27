@@ -26,8 +26,12 @@ str_day_range = [dt.isoformat() + "Z" for dt in dt_day_range]
 str_day_pairs = list(pairwise(str_day_range))
 
 @click.command('mainstay-fetch')
-@click.option('-e', '--endpoint', type=str, help='The URL endpoint you want to hit e.g. "messages/"')
-@click.option('-o', '--output-name', type=str, help='The prefix for your output files.')
+@click.option('-e', '--endpoint',
+              type=str, help='The URL endpoint you want to hit e.g. "messages/"',
+              prompt=True)
+@click.option('-o', '--output-name',
+              type=str, help='The prefix for your output files.',
+              prompt=True)
 @click.option('-p', '--parameter', nargs=2, type=click.Tuple([str, str]), multiple=True, help='The parameter name and value, e.g. -p "since" "2025-05-20T12:00:00Z"')
 @click.option('--interactive', is_flag=True)
 def fetch_cli(endpoint: str, output_name: str, parameter: list, interactive: bool):
