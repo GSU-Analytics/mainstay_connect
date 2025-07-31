@@ -38,11 +38,17 @@ Further documentation is available at:
 https://docs.api.mainstay.com/
 """
 
-
+# External dependencies
 import requests
 import keyring
 import pandas as pd
-from typing import Dict, Any
+from pathlib import Path
+from mainstay_connect.utils import pagination_utils
+from typing import Dict, Any, Union
+from collections.abc import Callable
+
+# Subpackage imports
+from mainstay_connect.utils import pagination_utils
 
 class MainstayConnect:
     base_url = "https://api.admithub.com/"
@@ -95,7 +101,7 @@ class MainstayConnect:
         keyring.set_password(self.service_name, 'api_token', new_token)
         print("Token has been reset successfully.")
 
-    def test_connection(self) -> Dict[str, any]:
+    def test_connection(self) -> Dict[str, Any]:
         """
         Tests the connection to the Mainstay API using the provided URL and headers.
 
@@ -119,6 +125,46 @@ class MainstayConnect:
         response_data['response_code'] = response.status_code
         return response_data
 
+    def get_mainstay_endpoint(self, endpoint: str, **kwargs) -> Dict[str, Any]:
+        """
+        Send any arbitrary Mainstay API call. Most custom get methods in this
+        class dispatch to this method under the hood.
+
+        Args:
+            endpoint (str): A Mainstay API endpoing, such as 'contacts/'
+            **kwargs: Arbitrary keyword arguments for optional filters. These
+                will vary depending on the endpoint you use. Examples might include:
+                - texting_status (Optional[str]): Filter by texting status (opted-in, opted-out, temp-pause).
+                - custom (Optional[str]): Filter by custom fields.
+                - can_text (Optional[str]): Filter by can_text value (True, true, 1, False, false, 0).
+                - include_test_contacts (Optional[str]): Include test contacts (True, true, 1, False, false, 0).
+                - include_nonpermitted_contacts (Optional[str]): Include non-permitted contacts (True, true, 1, False, false, 0).
+                - modified_since (Optional[str]): Filter by last modified date (ISO 8601 format).
+                - modified_before (Optional[str]): Filter by modified before date (ISO 8601 format).
+
+        Returns:
+            dict: JSON response from the API containing the contact details.
+
+        Example:
+            >>> connector = MainstayConnector()
+            >>> contact = connector.get_mainstay_endpoint("contacts/1234567890", texting_status="opted-in")
+            >>> print(contact)
+            {...}
+        """
+        # Construct the endpoint
+        url = self.base_url + endpoint
+
+        # Remove any None values from the kwargs dictionary
+        params = {key: value for key, value in kwargs.items() if value is not None}
+
+        # Ping the server
+        response = requests.get(url, headers=self.headers, params=params)
+
+        # Parse the response
+        if not response.status_code == 200:
+            response.raise_for_status()
+        return response.json()
+
     def get_contact(self, id: str, **kwargs) -> Dict[str, Any]:
         """
         Retrieve a single contact by CRM ID, phone, or AdmitHub ID from the Mainstay API.
@@ -133,7 +179,7 @@ class MainstayConnect:
                 - include_nonpermitted_contacts (Optional[str]): Include non-permitted contacts (True, true, 1, False, false, 0).
                 - modified_since (Optional[str]): Filter by last modified date (ISO 8601 format).
                 - modified_before (Optional[str]): Filter by modified before date (ISO 8601 format).
-        
+
         Returns:
             dict: JSON response from the API containing the contact details.
 
@@ -143,24 +189,13 @@ class MainstayConnect:
             >>> print(contact)
             {...}
         """
-        url = f"{self.base_url}contacts/{id}/"
-        
-        # Remove any None values from the kwargs dictionary
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 404:
-            return {"detail": "not found"}
-        else:
-            response.raise_for_status()
+        endpoint = f"contacts/{id}/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def get_contacts(self, **kwargs) -> Dict[str, Any]:
         """
         Fetch contacts from the Navigate API with optional filters.
-        
+
         Args:
             **kwargs: Arbitrary keyword arguments for optional filters, such as:
                 - texting_status (Optional[str]): Filter by texting status (opted-in, opted-out, temp-pause).
@@ -171,7 +206,7 @@ class MainstayConnect:
                 - modified_since (Optional[str]): Filter by last modified date (ISO 8601 format).
                 - modified_before (Optional[str]): Filter by modified before date (ISO 8601 format).
                 - page (Optional[int]): Page number for paginated results.
-            
+
         Returns:
             dict: JSON response from the API containing the contacts.
 
@@ -181,17 +216,8 @@ class MainstayConnect:
             >>> print(contacts)
             {...}
         """
-        url = self.base_url + "contacts/"
-        
-        # Remove any None values from the kwargs dictionary
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "contacts/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def get_custom_fields(self) -> Dict[str, Any]:
         """
@@ -206,14 +232,8 @@ class MainstayConnect:
             >>> print(custom_fields)
             {'custom_fields': ['Field1', 'Field2', ...]}
         """
-        url = self.base_url + "custom_fields"
-        
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "custom_fields/"
+        return self.get_mainstay_endpoint(endpoint)
 
     def get_custom_values(self, field: str) -> Dict[str, Any]:
         """
@@ -231,18 +251,8 @@ class MainstayConnect:
             >>> print(custom_values)
             {'values': ['Value1', 'Value2', ...]}
         """
-        url = self.base_url + "custom_values"
-        
-        params = {'field': field}
-        
-        response = requests.get(url, headers=self.headers, params=params)
-        
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 400:
-            return {"detail": "Missing or invalid field"}
-        else:
-            response.raise_for_status()
+        endpoint = "custom_values/"
+        return self.get_mainstay_endpoint(endpoint, field=field)
 
     def get_default_fields(self) -> Dict[str, Any]:
         """
@@ -257,14 +267,8 @@ class MainstayConnect:
             >>> print(default_fields)
             {...}
         """
-        url = self.base_url + "default_fields"
-        
-        response = requests.get(url, headers=self.headers)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "default_fields/"
+        return self.get_mainstay_endpoint(endpoint)
 
     def get_campaign_list(self, **kwargs) -> Dict[str, Any]:
         """
@@ -282,7 +286,7 @@ class MainstayConnect:
                 - crm_id (Optional[str]): Return all campaigns for which a contact with the provided CRM ID was a recipient.
                 - admithub_contact_id (Optional[str]): Return all campaigns for which a contact with the provided AdmitHub ID was a recipient.
                 - page (Optional[int]): A page number within the paginated result set.
-        
+
         Returns:
             dict: JSON response from the API containing the campaigns.
 
@@ -292,13 +296,8 @@ class MainstayConnect:
             >>> print(campaigns)
             {...}
         """
-        url = self.base_url + "campaigns/"
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = self.base_url + "campaigns/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
 
     def get_messages(self, **kwargs) -> Dict[str, Any]:
         """
@@ -314,7 +313,7 @@ class MainstayConnect:
                 - test_user (Optional[str]): Filter messages based on the test_user status of the sender.
                 - include_test_user (Optional[str]): Include messages from test contacts.
                 - page (Optional[int]): A page number within the paginated result set.
-        
+
         Returns:
             dict: JSON response from the API containing the messages.
 
@@ -324,13 +323,84 @@ class MainstayConnect:
             >>> print(messages)
             {...}
         """
-        url = self.base_url + "messages/"
-        params = {key: value for key, value in kwargs.items() if value is not None}
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            response.raise_for_status()
+        endpoint = "messages/"
+        return self.get_mainstay_endpoint(endpoint, **kwargs)
+
+    def create_pagination_wrapper(
+            self,
+            method: Callable,
+            serialize: bool=False,
+            checkpoint_location: str | Path='./checkpoints',
+            output_name: str | None=None,
+            sleep_duration=1.5):
+        """Creates a pagination wrapper for a given method. Useful for any arbitrary
+        API endpoint retrieval which returns a linked list of pages as results.
+
+        Parameters:
+        - method: The method to be wrapped for pagination e.g. `get_messages`.
+        - serialize (bool, optional): If True, results will be serialized. Defaults to False.
+        - checkpoint_location (str, optional): Location to store checkpoints. Defaults to './checkpoints'.
+        - output_name (str, optional): Name of the output file. Defaults to None.
+        - sleep_duration (float, optional): Duration to sleep between pagination requests. Defaults to 1.5 seconds.
+
+        Returns:
+        - function: A wrapper function that handles pagination for the specified method.
+
+        Example:
+        ```
+        >>> connector = MainstayConnector()
+        >>> get_message_paginations = connector.create_pagination_wrapper(connector.get_messages, serialize=True, output_name="Spring_2020")
+        >>> results = get_message_paginations(...)
+        ```
+        """
+        def pagination_wrapper(**mainstay_kwargs):
+            return pagination_utils.extract_paginated_results(
+                self,
+                method,
+                serialize=serialize,
+                checkpoint_location=checkpoint_location,
+                output_name=output_name,
+                sleep_duration=sleep_duration,
+                **mainstay_kwargs
+            )
+        # Dynamically build a docstring for the wrapping function, based on the method passed
+        # to the pagination wrapper.
+        if method.__doc__:
+            pagination_wrapper.__doc__ = 'This wrapper function paginates over the following function: \n\n' + method.__doc__
+        # Return the wrapped function
+        return pagination_wrapper
+    
+    def load_paginated_checkpoints(self, path: Path | str, name: str, raw: bool=False, extension='.pickle') -> dict | pd.DataFrame:
+        """Load a sequence of pickle files into one dictionary or DataFrame.
+
+        This function searches for all files in the specified directory (`path`) that match the given `name` and `extension`.
+        It then loads the content of each pickle file into a dictionary, where the key is the file name (without the extension)
+        and the value is the unpickled content of the file.
+
+        Parameters:
+        path (Path): The directory path where the pickle files are located.
+        name (str): The base name of the pickle files to be loaded.
+        extension (str, optional): The file extension of the pickle files. Defaults to '.pickle'.
+        raw:
+
+        Returns one of:
+        dict: A dictionary containing the contents of the loaded pickle files, with file names as keys.
+        pd.DataFrame: A DataFrame containing the combined pagination results.
+        """
+        loaded_paginations = pagination_utils.load_paginated_checkpoints(path=Path(path), name=name, extension=extension)
+        if raw:
+            return loaded_paginations
+
+        def combine_pagination_results(pagination_list):
+            combined_paginations = [
+                result
+                for page_id in pagination_list
+                for result in pagination_list[page_id]['results']
+            ]
+            return combined_paginations
+        
+        pagination_results = combine_pagination_results(loaded_paginations)
+        return pd.DataFrame(pagination_results)
 
     def json_to_dataframe(self, json_data: Dict[str, Any], key: str = 'results') -> pd.DataFrame:
         """
